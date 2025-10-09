@@ -38,6 +38,7 @@ export const getAllCars = async (req, res) => {
 
         if (applicablePromotions.length > 0) {
             let bestPrice = carObj.pricePerDay;
+            let bestPromo = null;
             applicablePromotions.forEach(promo => {
                 let discountedPrice;
                 if (promo.discountType === 'percentage') {
@@ -47,9 +48,17 @@ export const getAllCars = async (req, res) => {
                 }
                 if (discountedPrice < bestPrice) {
                     bestPrice = discountedPrice;
+                    bestPromo = promo;
                 }
             });
             carObj.pricePerDay = bestPrice;
+            if (bestPromo) {
+              carObj.promotion = {
+                title: bestPromo.title,
+                discountValue: bestPromo.discountValue,
+                discountType: bestPromo.discountType,
+              };
+            }
         }
         return carObj;
     });

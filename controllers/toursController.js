@@ -39,6 +39,7 @@ export const getAllTours = async (req, res) => {
 
         if (applicablePromotions.length > 0) {
             let bestPrice = tourObj.price;
+            let bestPromo = null;
             applicablePromotions.forEach(promo => {
                 let discountedPrice;
                 if (promo.discountType === 'percentage') {
@@ -48,9 +49,17 @@ export const getAllTours = async (req, res) => {
                 }
                 if (discountedPrice < bestPrice) {
                     bestPrice = discountedPrice;
+                    bestPromo = promo;
                 }
             });
             tourObj.price = bestPrice;
+            if (bestPromo) {
+              tourObj.promotion = {
+                title: bestPromo.title,
+                discountValue: bestPromo.discountValue,
+                discountType: bestPromo.discountType,
+              };
+            }
         }
         return tourObj;
     });
