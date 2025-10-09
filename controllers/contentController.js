@@ -1,62 +1,89 @@
-import Content from '../models/Content.js';
-import { createNotification } from './notificationController.js';
-import { createActivityLog } from './activityLogController.js';
+import Content from "../models/Content.js";
+import { createNotification } from "./notificationController.js";
+import { createActivityLog } from "./activityLogController.js";
 
-// Get all unique content types from the database
+// 🟦 Get all unique content types
 export const getAllContentTypes = async (req, res) => {
-    try {
-        const contentTypes = await Content.distinct('type');
-        res.json({ success: true, data: contentTypes });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Server Error' });
-    }
-};
-
-// Get content by its type from the database
-export const getContentByType = async (req, res) => {
-  const { type } = req.params;
   try {
-    let content = await Content.findOne({ type });
-    // If content for a type doesn't exist, create a default entry
-    if (!content) {
-      const defaultTitle = type.charAt(0).toUpperCase() + type.slice(1).replace(/([A-Z])/g, ' $1');
-      content = new Content({ type, title: defaultTitle, content: '' });
-      await content.save();
-    }
-    res.json({ success: true, data: content });
+    const contentTypes = await Content.distinct("type");
+    res.json({ success: true, data: contentTypes });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server Error' });
+    console.error("Error fetching content types:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 
-// Update content by its type in the database
+// 🟦 Get content by its type (creates default if not existing)
+export const getContentByType = async (req, res) => {
+  const { type } = req.params;
+
+  try {
+    const defaultTitle =
+      type.charAt(0).toUpperCase() + type.slice(1).replace(/([A-Z])/g, " $1");
+
+    // Atomically find or create the document to prevent race conditions
+    const content = await Content.findOneAndUpdate(
+      { type },
+      { $setOnInsert: { type, title: defaultTitle, content: "" } },
+      {
+        new: true,
+        upsert: true,
+        runValidators: true,
+      }
+    );
+
+    res.json({ success: true, data: content });
+  } catch (error) {
+    console.error(`Error in getContentByType for type "${type}":`, error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// 🟦 Update content by its type
 export const updateContent = async (req, res) => {
   const { type } = req.params;
   const { title, content } = req.body;
+
   try {
-    // Find the document by type and update it, or create it if it doesn't exist (upsert)
+    // Update or create if not existing
     const contentDoc = await Content.findOneAndUpdate(
-        { type },
-        { title, content },
-        { new: true, upsert: true, runValidators: true }
+      { type },
+      { title, content },
+      { new: true, upsert: true, runValidators: true }
     );
 
-    const io = req.app.get('io');
-    if (io && req.user.role === 'employee') {
-        const message = `Employee ${req.user.firstName} updated the '${type}' content.`;
-        const link = '/owner/content-management';
-        const newLog = await createActivityLog(req.user.id, 'UPDATE_CONTENT', `Content: ${type}`, link);
-        const notifications = await createNotification({ roles: ['admin'], module: 'content' }, message, { admin: link });
+    // 🔔 Real-time activity + notification for admins
+    const io = req.app.get("io");
+    if (io && req.user.role === "employee") {
+      const message = `Employee ${req.user.firstName} updated the '${type}' content.`;
+      const link = "/owner/content-management";
 
-        io.to('admin').emit('activity-log-update', newLog);
+      const newLog = await createActivityLog(
+        req.user.id,
+        "UPDATE_CONTENT",
+        `Content: ${type}`,
+        link
+      );
+      const notifications = await createNotification(
+        { roles: ["admin"], module: "content" },
+        message,
+        { admin: link }
+      );
 
-        if (notifications && notifications.length > 0) {
-            io.to('admin').emit('notification', notifications[0]);
-        }
+      io.to("admin").emit("activity-log-update", newLog);
+
+      if (notifications && notifications.length > 0) {
+        io.to("admin").emit("notification", notifications[0]);
+      }
     }
 
-    res.json({ success: true, message: 'Content updated successfully', data: contentDoc });
+    res.json({
+      success: true,
+      message: "Content updated successfully",
+      data: contentDoc,
+    });
   } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
+    console.error(`Error updating content "${type}":`, error);
+    res.status(400).json({ success: false, message: error.message });
   }
 };

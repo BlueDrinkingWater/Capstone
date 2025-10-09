@@ -605,7 +605,12 @@ const DataService = {
   // --- Content Management ---
   fetchContent: async (type) => {
     try {
-      const response = await api.get(`/api/content/${type}`);
+      // Add a cache-busting query parameter
+      const response = await api.get(`/api/content/${type}`, {
+        params: {
+          _: new Date().getTime(),
+        }
+      });
       return response.data;
     } catch (error) {
       return handleError(error, `Failed to fetch '${type}' content.`);

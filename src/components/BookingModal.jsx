@@ -6,15 +6,25 @@ import DataService, { SERVER_URL } from './services/DataService.jsx';
 import CalendarBooking from './CalendarBooking.jsx';
 import DropoffMap from './DropoffMap.jsx';
 import { useAuth } from './Login.jsx';
+import { useApi } from '../hooks/useApi.jsx';
 
 const BookingModal = ({ isOpen, onClose, item, itemType }) => {
   const { user } = useAuth();
+  
+  const { data: termsData, loading: termsLoading } = useApi(() => DataService.fetchContent('bookingTerms'), [isOpen], { immediate: isOpen });
+  const { data: qrData, loading: qrLoading } = useApi(() => DataService.fetchContent('paymentQR'), [isOpen], { immediate: isOpen });
+
+  const bookingTerms = termsData?.success ? termsData.data.content : 'Terms and conditions could not be loaded.';
+  const paymentQRContent = qrData?.success ? qrData.data.content : '';
+  const paymentQR = paymentQRContent ? (paymentQRContent.startsWith('http') ? paymentQRContent : `${SERVER_URL}${paymentQRContent.startsWith('/') ? '' : '/'}${paymentQRContent}`) : '';
+
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
-    address: '', // Added address field
+    address: '',
     startDate: '',
     time: '',
     numberOfDays: 1,
@@ -30,8 +40,6 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
     amountPaid: ''
   });
 
-  const [bookingTerms, setBookingTerms] = useState('');
-  const [paymentQR, setPaymentQR] = useState('');
   const [totalPrice, setTotalPrice] = useState(0);
   const [calculatedEndDate, setCalculatedEndDate] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -39,56 +47,39 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   useEffect(() => {
-    const fetchContentAndSetDefaults = async () => {
-      if (isOpen) {
-        const initialState = {
-            firstName: user?.firstName || '',
-            lastName: user?.lastName || '',
-            email: user?.email || '',
-            phone: user?.phone || '',
-            address: user?.address || '', // Initialize address
-            startDate: '',
-            time: '',
-            numberOfDays: 1,
-            numberOfGuests: 1,
-            specialRequests: '',
-            agreedToTerms: false,
-            paymentProof: null,
-            pickupLocation: '',
-            dropoffLocation: '',
-            dropoffCoordinates: null,
-            deliveryMethod: 'pickup',
-            paymentReference: '',
-            amountPaid: ''
-        };
+    if (isOpen) {
+      const initialState = {
+          firstName: user?.firstName || '',
+          lastName: user?.lastName || '',
+          email: user?.email || '',
+          phone: user?.phone || '',
+          address: user?.address || '',
+          startDate: '',
+          time: '',
+          numberOfDays: 1,
+          numberOfGuests: 1,
+          specialRequests: '',
+          agreedToTerms: false,
+          paymentProof: null,
+          pickupLocation: '',
+          dropoffLocation: '',
+          dropoffCoordinates: null,
+          deliveryMethod: 'pickup',
+          paymentReference: '',
+          amountPaid: ''
+      };
 
-        if (itemType === 'tour' && item) {
-            initialState.startDate = item.startDate ? new Date(item.startDate).toISOString().split('T')[0] : '';
-            initialState.time = '09:00';
-        }
-        
-        setFormData(initialState);
-        setTotalPrice(0);
-        setCalculatedEndDate(null);
-        setSubmitError('');
-        setSubmitSuccess(false);
-
-        try {
-          const [termsRes, qrRes] = await Promise.all([
-            DataService.fetchContent('bookingTerms'),
-            DataService.fetchContent('paymentQR')
-          ]);
-          if (termsRes.success) setBookingTerms(termsRes.data.content);
-          if (qrRes.success && qrRes.data.content) {
-            const qrUrl = qrRes.data.content;
-            setPaymentQR(qrUrl.startsWith('http') ? qrUrl : `${SERVER_URL}${qrUrl.startsWith('/') ? '' : '/'}${qrUrl}`);
-          }
-        } catch (error) {
-          console.error("Failed to fetch modal content:", error);
-        }
+      if (itemType === 'tour' && item) {
+          initialState.startDate = item.startDate ? new Date(item.startDate).toISOString().split('T')[0] : '';
+          initialState.time = '09:00';
       }
-    };
-    fetchContentAndSetDefaults();
+      
+      setFormData(initialState);
+      setTotalPrice(0);
+      setCalculatedEndDate(null);
+      setSubmitError('');
+      setSubmitSuccess(false);
+    }
   }, [isOpen, item, itemType, user]);
 
   useEffect(() => {
@@ -123,31 +114,24 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
     e.preventDefault();
     setSubmitError('');
     
-    // Validation
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address) {
       return setSubmitError('Please fill in all your personal information, including your address.');
     }
-    
     if (itemType === 'car' && (!formData.startDate || !formData.time || formData.numberOfDays < 1)) {
       return setSubmitError('Please select a start date, time, and number of days.');
     }
-    
     if (itemType === 'car' && formData.deliveryMethod === 'pickup' && !formData.pickupLocation) {
       return setSubmitError('Please select a pickup location.');
     }
-
     if (itemType === 'car' && formData.deliveryMethod === 'dropoff' && !formData.dropoffLocation) {
       return setSubmitError('Please select a drop-off location on the map.');
     }
-    
     if (itemType === 'tour' && (!formData.startDate || !item.endDate)) {
       return setSubmitError('Tour date information is missing. Please contact support.');
     }
-    
     if (!formData.paymentProof || !formData.paymentReference || !formData.amountPaid) {
       return setSubmitError('Please provide all payment details, including the proof of payment.');
     }
-    
     if (!formData.agreedToTerms) {
       return setSubmitError('You must agree to the terms and conditions to proceed.');
     }
@@ -156,7 +140,6 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
 
     try {
       const bookingData = new FormData();
-      
       const fullStartDate = combineDateAndTime(formData.startDate, formData.time);
       const fullEndDate = calculatedEndDate ? calculatedEndDate.toISOString() : fullStartDate;
 
@@ -303,7 +286,7 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                     <h3 className="font-semibold mb-3 text-blue-800">Payment Details</h3>
                     <div className="flex flex-col items-center">
-                        {paymentQR ? <img src={paymentQR} alt="Payment QR Code" className="w-48 h-48 object-contain mb-4 border rounded-md" /> : <p className="text-sm text-gray-500 mb-4">QR code not available.</p>}
+                        {qrLoading ? <p>Loading QR...</p> : paymentQR ? <img src={paymentQR} alt="Payment QR Code" className="w-48 h-48 object-contain mb-4 border rounded-md" /> : <p className="text-sm text-gray-500 mb-4">QR code not available.</p>}
                         <div className="w-full space-y-4">
                           <input type="text" placeholder="Payment Reference Number *" required value={formData.paymentReference} onChange={(e) => setFormData({ ...formData, paymentReference: e.target.value })} className="w-full p-2 border rounded-md"/>
                           <input type="number" placeholder="Amount Paid *" required value={formData.amountPaid} onChange={(e) => setFormData({ ...formData, amountPaid: e.target.value })} className="w-full p-2 border rounded-md"/>
@@ -338,9 +321,9 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
                   </div>
 
                   {/* Terms */}
-                  <div className="bg-gray-50 p-4 rounded-lg max-h-32 overflow-y-auto border">
+                  <div className="bg-gray-50 p-4 rounded-lg overflow-y-auto border">
                     <h3 className="font-semibold mb-2 text-sm">Terms and Conditions</h3>
-                    <p className="text-xs text-gray-600 whitespace-pre-wrap">{bookingTerms || 'Terms and conditions could not be loaded.'}</p>
+                    {termsLoading ? <p>Loading terms...</p> : <p className="text-xs text-gray-600 whitespace-pre-wrap">{bookingTerms}</p>}
                   </div>
                   <div className="flex items-start"><input type="checkbox" id="terms" checked={formData.agreedToTerms} onChange={(e) => setFormData({ ...formData, agreedToTerms: e.target.checked })} className="h-4 w-4 text-blue-600 border-gray-300 rounded mt-1"/><label htmlFor="terms" className="ml-2 block text-sm text-gray-900">I have read and agree to the terms and conditions.</label></div>
                 </div>

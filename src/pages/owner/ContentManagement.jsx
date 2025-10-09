@@ -8,7 +8,7 @@ const ContentManagement = () => {
   const [activeTab, setActiveTab] = useState('about');
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  
+
   const contentTabs = [
     { key: 'about', label: 'About Us', icon: FileText, description: 'Company background and story' },
     { key: 'mission', label: 'Mission', icon: Globe, description: 'Company mission statement' },
@@ -20,26 +20,29 @@ const ContentManagement = () => {
     { key: 'paymentQR', label: 'Payment QR', icon: CreditCard, description: 'Upload and manage the QR code for payments.' }
   ];
 
-  const { data: contentData, loading, error, refetch: fetchAllContent } = useApi(
+  // The useApi hook to fetch all content on initial load
+  const { data: initialContentData, loading, error, refetch: fetchAllContent } = useApi(
     () => Promise.all(contentTabs.map(tab => DataService.fetchContent(tab.key)))
   );
   
+  // Local state to hold the content being edited
   const [content, setContent] = useState({});
 
   useEffect(() => {
-    if(contentData) {
+    if (initialContentData) {
       const newContentState = {};
-      contentData.forEach((result, index) => {
+      initialContentData.forEach((result, index) => {
         const tabKey = contentTabs[index].key;
-        if (result.success) {
+        if (result.success && result.data) {
           newContentState[tabKey] = result.data;
         } else {
+          // Provide a default structure if fetching fails for a specific item
           newContentState[tabKey] = { title: contentTabs[index].label, content: '' };
         }
       });
       setContent(newContentState);
     }
-  }, [contentData]);
+  }, [initialContentData]);
 
   const handleContentChange = (field, value) => {
     setContent(prev => ({
@@ -62,17 +65,38 @@ const ContentManagement = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await DataService.updateContent(activeTab, content[activeTab]);
-      alert('Content updated successfully!');
-      setEditMode(false);
-      fetchAllContent();
+      // Get the currently edited content from the local state
+      const contentToSave = content[activeTab];
+      
+      // Call the update service
+      const response = await DataService.updateContent(activeTab, contentToSave);
+
+      if (response.success && response.data) {
+        // **FIX:** Directly update the local state with the confirmed data from the server response.
+        // This ensures the UI is in sync with the database immediately.
+        setContent(prev => ({
+          ...prev,
+          [activeTab]: response.data
+        }));
+        
+        alert('Content updated successfully!');
+        setEditMode(false); // Exit edit mode
+      } else {
+        throw new Error(response.message || "Failed to save content.");
+      }
     } catch (error) {
       console.error("Failed to save content:", error);
-      alert("Error saving content.");
+      alert(`Error saving content: ${error.message}`);
     } finally {
       setSaving(false);
     }
   };
+
+  const handleCancel = () => {
+    setEditMode(false);
+    // Refetch the original data from the server to discard any local changes
+    fetchAllContent();
+  }
 
   const activeContent = content[activeTab] || { title: '', content: '' };
   const activeTabInfo = contentTabs.find(tab => tab.key === activeTab);
@@ -87,7 +111,7 @@ const ContentManagement = () => {
         <div>
           {editMode ? (
             <>
-              <button onClick={() => { setEditMode(false); fetchAllContent(); }} className="bg-gray-200 px-4 py-2 rounded-lg mr-2">Cancel</button>
+              <button onClick={handleCancel} className="bg-gray-200 px-4 py-2 rounded-lg mr-2">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center">
                 {saving ? 'Saving...' : <><Save size={16} className="mr-2" /> Save</>}
               </button>
@@ -109,7 +133,8 @@ const ContentManagement = () => {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-2 px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  disabled={editMode}
+                  className={`flex items-center gap-2 px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors disabled:cursor-not-allowed disabled:text-gray-400 ${
                     activeTab === tab.key
                       ? 'border-blue-500 text-blue-600 bg-blue-50'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -164,7 +189,10 @@ const ContentManagement = () => {
                     <div className="w-full min-h-64 p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center">
                       {activeContent.content ? (
                         <img 
-  src={activeContent.content.startsWith('http') ? activeContent.content : `${SERVER_URL}${activeContent.content.startsWith('/') ? activeContent.content : '/' + activeContent.content}`} alt="Payment QR Code" className="max-w-xs max-h-64 object-contain" />
+                          src={activeContent.content.startsWith('http') ? activeContent.content : `${SERVER_URL}${activeContent.content.startsWith('/') ? activeContent.content : '/' + activeContent.content}`} 
+                          alt="Payment QR Code" 
+                          className="max-w-xs max-h-64 object-contain" 
+                        />
                       ) : (
                         <div className="text-center text-gray-500">
                           <ImageIcon className="w-16 h-16 mx-auto mb-4" />

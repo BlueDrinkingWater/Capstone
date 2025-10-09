@@ -40,6 +40,19 @@ export const getPublicFeedback = async (req, res) => {
         res.status(500).json({ success: false, message: 'Failed to fetch public feedback.' });
     }
 };
+
+// Get user's own feedback
+export const getMyFeedback = async (req, res) => {
+    try {
+        const feedback = await Feedback.find({ user: req.user.id })
+            .sort({ createdAt: -1 });
+        res.json({ success: true, data: feedback });
+    } catch (error) {
+        console.error('Error fetching user feedback:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch your feedback.' });
+    }
+};
+
 // Approve feedback (Admin only)
 export const approveFeedback = async (req, res) => {
     try {
