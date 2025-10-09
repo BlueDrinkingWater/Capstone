@@ -57,7 +57,9 @@ const CarDetails = () => {
   
   // Fetch car details
   const { data: carData, loading, error } = useApi(() => DataService.fetchCarById(id), [id]);
+  const { data: promotionsResponse } = useApi(DataService.fetchAllPromotions, []);
   const car = carData?.data;
+  const promotions = promotionsResponse?.data || [];
 
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [mainImage, setMainImage] = useState('');
@@ -71,6 +73,41 @@ const CarDetails = () => {
   const handleBookCar = () => {
     setShowBookingModal(true);
   };
+  
+    const getDiscountedPrice = (item) => {
+      if (!promotions || promotions.length === 0) {
+          return { price: item.pricePerDay, originalPrice: null };
+      }
+
+      const applicablePromotions = promotions.filter(promo => {
+          if (!promo.isActive) return false;
+          if (promo.applicableTo === 'all') return true;
+          if (promo.applicableTo === 'car' && promo.itemIds.includes(item._id)) return true;
+          return false;
+      });
+
+      if (applicablePromotions.length === 0) {
+          return { price: item.pricePerDay, originalPrice: null };
+      }
+
+      let bestPrice = item.pricePerDay;
+      let originalPrice = item.pricePerDay;
+
+      applicablePromotions.forEach(promo => {
+          let discountedPrice;
+          if (promo.discountType === 'percentage') {
+              discountedPrice = originalPrice - (originalPrice * (promo.discountValue / 100));
+          } else {
+              discountedPrice = originalPrice - promo.discountValue;
+          }
+
+          if (discountedPrice < bestPrice) {
+              bestPrice = discountedPrice;
+          }
+      });
+      
+      return { price: bestPrice, originalPrice: originalPrice };
+  };
 
   if (loading) {
     return (
@@ -83,6 +120,9 @@ const CarDetails = () => {
   if (error || !car) {
     return <div className="text-center p-12 text-red-500">Error: {error?.message || 'Car not found.'}</div>;
   }
+  
+    const { price, originalPrice } = getDiscountedPrice(car);
+
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -198,7 +238,12 @@ const CarDetails = () => {
           <div className="lg:col-span-2">
             <div className="sticky top-28 bg-white rounded-xl shadow-lg p-6 border">
               <div className="flex items-baseline mb-6">
-                <p className="text-3xl font-bold text-blue-600">₱{car.pricePerDay?.toLocaleString()}</p>
+                {originalPrice && originalPrice > price && (
+                    <span className="text-gray-500 line-through mr-2">{originalPrice.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</span>
+                )}
+                <p className="text-3xl font-bold text-blue-600">
+                    {price.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}
+                </p>
                 <span className="text-lg text-gray-500 ml-1">/day</span>
               </div>
               <p className="text-gray-600 mb-6">

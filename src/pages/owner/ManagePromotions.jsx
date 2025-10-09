@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash, Save, X, Tag } from 'lucide-react';
 import DataService from '../../components/services/DataService';
 import { useApi } from '../../hooks/useApi';
 
 const ManagePromotions = () => {
-    const { data: promotionsData, loading, error, refetch: fetchPromotions } = useApi(DataService.fetchAllPromotionsAdmin);
+    const { data: promotionsData, loading, error, refetch: fetchPromotions } = useApi(() => DataService.fetchAllPromotionsAdmin(), []);
     const promotions = promotionsData?.data || [];
+    const [cars, setCars] = useState([]);
+    const [tours, setTours] = useState([]);
 
     const [showModal, setShowModal] = useState(false);
     const [editingPromotion, setEditingPromotion] = useState(null);
@@ -15,10 +17,27 @@ const ManagePromotions = () => {
         discountType: 'percentage',
         discountValue: 0,
         applicableTo: 'all',
+        itemIds: [],
         startDate: '',
         endDate: '',
         isActive: true
     });
+
+    useEffect(() => {
+        if (showModal) {
+            const fetchServices = async () => {
+                const carsResponse = await DataService.fetchAllCars();
+                if (carsResponse.success) {
+                    setCars(carsResponse.data);
+                }
+                const toursResponse = await DataService.fetchAllTours();
+                if (toursResponse.success) {
+                    setTours(toursResponse.data);
+                }
+            };
+            fetchServices();
+        }
+    }, [showModal]);
 
     const handleOpenModal = (promo = null) => {
         if (promo) {
@@ -27,6 +46,7 @@ const ManagePromotions = () => {
                 ...promo,
                 startDate: promo.startDate.split('T')[0],
                 endDate: promo.endDate.split('T')[0],
+                itemIds: promo.itemIds || [],
             });
         } else {
             setEditingPromotion(null);
@@ -36,6 +56,7 @@ const ManagePromotions = () => {
                 discountType: 'percentage',
                 discountValue: 0,
                 applicableTo: 'all',
+                itemIds: [],
                 startDate: '',
                 endDate: '',
                 isActive: true
@@ -68,6 +89,16 @@ const ManagePromotions = () => {
             }
         }
     };
+
+    const handleApplicableToChange = (e) => {
+        setFormData({ ...formData, applicableTo: e.target.value, itemIds: [] });
+    };
+
+    const handleItemIdsChange = (e) => {
+        const selectedIds = Array.from(e.target.selectedOptions, option => option.value);
+        setFormData({ ...formData, itemIds: selectedIds });
+    };
+
 
     return (
         <div className="p-6">
@@ -107,6 +138,27 @@ const ManagePromotions = () => {
                                 <option value="fixed">Fixed Amount</option>
                             </select>
                             <input type="number" value={formData.discountValue} onChange={e => setFormData({ ...formData, discountValue: e.target.value })} placeholder="Discount Value" className="w-full p-2 border rounded" />
+                            <select value={formData.applicableTo} onChange={handleApplicableToChange} className="w-full p-2 border rounded">
+                                <option value="all">All Services</option>
+                                <option value="car">Specific Cars</option>
+                                <option value="tour">Specific Tours</option>
+                            </select>
+
+                            {formData.applicableTo === 'car' && (
+                                <select multiple value={formData.itemIds} onChange={handleItemIdsChange} className="w-full p-2 border rounded h-32">
+                                    {cars.map(car => (
+                                        <option key={car._id} value={car._id}>{car.brand} {car.model}</option>
+                                    ))}
+                                </select>
+                            )}
+                            {formData.applicableTo === 'tour' && (
+                                <select multiple value={formData.itemIds} onChange={handleItemIdsChange} className="w-full p-2 border rounded h-32">
+                                    {tours.map(tour => (
+                                        <option key={tour._id} value={tour._id}>{tour.title}</option>
+                                    ))}
+                                </select>
+                            )}
+
                             <input type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="w-full p-2 border rounded" />
                             <input type="date" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} className="w-full p-2 border rounded" />
                         </div>

@@ -56,7 +56,9 @@ const TourDetails = () => {
   
   // Fetch tour details
   const { data: tourData, loading, error } = useApi(() => DataService.fetchTourById(id), [id]);
+  const { data: promotionsResponse } = useApi(DataService.fetchAllPromotions, []);
   const tour = tourData?.data;
+  const promotions = promotionsResponse?.data || [];
 
   // Fetch approved reviews for this tour
   const { data: reviewsData, loading: reviewsLoading } = useApi(() => DataService.fetchReviewsForItem(id), [id]);
@@ -79,6 +81,41 @@ const TourDetails = () => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
+  
+    const getDiscountedPrice = (item) => {
+      if (!promotions || promotions.length === 0) {
+          return { price: item.price, originalPrice: null };
+      }
+
+      const applicablePromotions = promotions.filter(promo => {
+          if (!promo.isActive) return false;
+          if (promo.applicableTo === 'all') return true;
+          if (promo.applicableTo === 'tour' && promo.itemIds.includes(item._id)) return true;
+          return false;
+      });
+
+      if (applicablePromotions.length === 0) {
+          return { price: item.price, originalPrice: null };
+      }
+
+      let bestPrice = item.price;
+      let originalPrice = item.price;
+
+      applicablePromotions.forEach(promo => {
+          let discountedPrice;
+          if (promo.discountType === 'percentage') {
+              discountedPrice = originalPrice - (originalPrice * (promo.discountValue / 100));
+          } else {
+              discountedPrice = originalPrice - promo.discountValue;
+          }
+
+          if (discountedPrice < bestPrice) {
+              bestPrice = discountedPrice;
+          }
+      });
+      
+      return { price: bestPrice, originalPrice: originalPrice };
+  };
 
   if (loading) {
     return (
@@ -91,6 +128,8 @@ const TourDetails = () => {
   if (error || !tour) {
     return <div className="text-center p-12 text-red-500">Error: {error?.message || 'Tour not found.'}</div>;
   }
+  
+    const { price, originalPrice } = getDiscountedPrice(tour);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -200,7 +239,12 @@ const TourDetails = () => {
           <div className="lg:col-span-2">
             <div className="sticky top-28 bg-white rounded-xl shadow-lg p-6 border">
               <div className="flex items-baseline mb-2">
-                <p className="text-3xl font-bold text-green-600">₱{tour.price?.toLocaleString()}</p>
+                {originalPrice && originalPrice > price && (
+                    <span className="text-gray-500 line-through mr-2">{originalPrice.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</span>
+                )}
+                <p className="text-3xl font-bold text-green-600">
+                    {price.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}
+                </p>
                 <span className="text-lg text-gray-500 ml-1">/person</span>
               </div>
               <div className="mb-6 bg-green-50 p-3 rounded-lg border border-green-200">

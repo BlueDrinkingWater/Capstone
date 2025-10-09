@@ -6,18 +6,52 @@ import DataService, { SERVER_URL } from './services/DataService.jsx';
 import CalendarBooking from './CalendarBooking.jsx';
 import DropoffMap from './DropoffMap.jsx';
 import { useAuth } from './Login.jsx';
-import { useApi } from '../hooks/useApi.jsx';
 
 const BookingModal = ({ isOpen, onClose, item, itemType }) => {
   const { user } = useAuth();
-  
-  const { data: termsData, loading: termsLoading } = useApi(() => DataService.fetchContent('bookingTerms'), [isOpen], { immediate: isOpen });
-  const { data: qrData, loading: qrLoading } = useApi(() => DataService.fetchContent('paymentQR'), [isOpen], { immediate: isOpen });
 
-  const bookingTerms = termsData?.success ? termsData.data.content : 'Terms and conditions could not be loaded.';
-  const paymentQRContent = qrData?.success ? qrData.data.content : '';
-  const paymentQR = paymentQRContent ? (paymentQRContent.startsWith('http') ? paymentQRContent : `${SERVER_URL}${paymentQRContent.startsWith('/') ? '' : '/'}${paymentQRContent}`) : '';
+  const [bookingTerms, setBookingTerms] = useState('Loading terms...');
+  const [paymentQR, setPaymentQR] = useState('');
+  const [termsLoading, setTermsLoading] = useState(true);
+  const [qrLoading, setQrLoading] = useState(true);
 
+  useEffect(() => {
+    if (isOpen) {
+      const fetchContent = async () => {
+        try {
+          setTermsLoading(true);
+          const termsResponse = await DataService.fetchContent('bookingTerms');
+          if (termsResponse.success) {
+            setBookingTerms(termsResponse.data.content);
+          } else {
+            setBookingTerms('Terms and conditions could not be loaded.');
+          }
+        } catch (error) {
+          setBookingTerms('Terms and conditions could not be loaded.');
+        } finally {
+          setTermsLoading(false);
+        }
+      };
+
+      const fetchQr = async () => {
+        try {
+          setQrLoading(true);
+          const qrResponse = await DataService.fetchContent('paymentQR');
+          if (qrResponse.success && qrResponse.data.content) {
+            const qrContent = qrResponse.data.content;
+            setPaymentQR(qrContent.startsWith('http') ? qrContent : `${SERVER_URL}${qrContent.startsWith('/') ? '' : '/'}${qrContent}`);
+          }
+        } catch (error) {
+          // Do nothing, QR is optional
+        } finally {
+          setQrLoading(false);
+        }
+      };
+
+      fetchContent();
+      fetchQr();
+    }
+  }, [isOpen]);
 
   const [formData, setFormData] = useState({
     firstName: '',

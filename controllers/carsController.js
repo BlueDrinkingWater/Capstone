@@ -1,4 +1,5 @@
 import Car from '../models/Car.js';
+import Promotion from '../models/Promotion.js';
 import { createNotification } from './notificationController.js';
 import { createActivityLog } from './activityLogController.js';
 
@@ -22,12 +23,43 @@ export const getAllCars = async (req, res) => {
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
       .sort({ createdAt: -1 });
+      
+    const promotions = await Promotion.find({ isActive: true, endDate: { $gte: new Date() } });
+    
+    const carsWithPromotions = cars.map(car => {
+        const carObj = car.toObject();
+        carObj.originalPrice = carObj.pricePerDay;
+
+        const applicablePromotions = promotions.filter(promo => {
+            if (promo.applicableTo === 'all') return true;
+            if (promo.applicableTo === 'car' && promo.itemIds.includes(car._id.toString())) return true;
+            return false;
+        });
+
+        if (applicablePromotions.length > 0) {
+            let bestPrice = carObj.pricePerDay;
+            applicablePromotions.forEach(promo => {
+                let discountedPrice;
+                if (promo.discountType === 'percentage') {
+                    discountedPrice = carObj.originalPrice - (carObj.originalPrice * (promo.discountValue / 100));
+                } else {
+                    discountedPrice = carObj.originalPrice - promo.discountValue;
+                }
+                if (discountedPrice < bestPrice) {
+                    bestPrice = discountedPrice;
+                }
+            });
+            carObj.pricePerDay = bestPrice;
+        }
+        return carObj;
+    });
+
 
     const total = await Car.countDocuments(query);
 
     res.json({
         success: true,
-        data: cars,
+        data: carsWithPromotions,
         pagination: { total, page: parseInt(page), limit: parseInt(limit), totalPages: Math.ceil(total / limit) }
     });
   } catch (error) {

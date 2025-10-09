@@ -21,10 +21,10 @@ const CustomerDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
 
     // Fetch user data
-    const { data: bookingsData, loading: bookingsLoading, refetch: refetchBookings } = useApi(DataService.fetchUserBookings, [user]);
-    const { data: reviewsData, loading: reviewsLoading, refetch: refetchReviews } = useApi(DataService.getMyReviews, [user]);
-    const { data: feedbackData, loading: feedbackLoading, refetch: refetchFeedback } = useApi(DataService.getMyFeedback, [user]);
-    const { data: publicFeedbackData, loading: publicFeedbackLoading } = useApi(DataService.getPublicFeedback, []);
+    const { data: bookingsData, loading: bookingsLoading, refetch: refetchBookings } = useApi(() => DataService.fetchUserBookings(), [user]);
+    const { data: reviewsData, loading: reviewsLoading, refetch: refetchReviews } = useApi(() => DataService.getMyReviews(), [user]);
+    const { data: feedbackData, loading: feedbackLoading, refetch: refetchFeedback } = useApi(() => DataService.getMyFeedback(), [user]);
+    const { data: publicFeedbackData, loading: publicFeedbackLoading } = useApi(() => DataService.getPublicFeedback(), []);
 
     const bookings = bookingsData?.data || [];
     const myReviews = reviewsData?.data || [];

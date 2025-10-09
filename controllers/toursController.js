@@ -1,5 +1,6 @@
 import Tour from '../models/Tour.js';
 import Booking from '../models/Booking.js';
+import Promotion from '../models/Promotion.js';
 import { createNotification } from './notificationController.js';
 import { createActivityLog } from './activityLogController.js';
 
@@ -24,10 +25,40 @@ export const getAllTours = async (req, res) => {
       .skip((parseInt(page) - 1) * parseInt(limit))
       .sort({ createdAt: -1 });
 
+    const promotions = await Promotion.find({ isActive: true, endDate: { $gte: new Date() } });
+    
+    const toursWithPromotions = tours.map(tour => {
+        const tourObj = tour.toObject();
+        tourObj.originalPrice = tourObj.price;
+
+        const applicablePromotions = promotions.filter(promo => {
+            if (promo.applicableTo === 'all') return true;
+            if (promo.applicableTo === 'tour' && promo.itemIds.includes(tour._id.toString())) return true;
+            return false;
+        });
+
+        if (applicablePromotions.length > 0) {
+            let bestPrice = tourObj.price;
+            applicablePromotions.forEach(promo => {
+                let discountedPrice;
+                if (promo.discountType === 'percentage') {
+                    discountedPrice = tourObj.originalPrice - (tourObj.originalPrice * (promo.discountValue / 100));
+                } else {
+                    discountedPrice = tourObj.originalPrice - promo.discountValue;
+                }
+                if (discountedPrice < bestPrice) {
+                    bestPrice = discountedPrice;
+                }
+            });
+            tourObj.price = bestPrice;
+        }
+        return tourObj;
+    });
+
     const total = await Tour.countDocuments(query);
     res.json({
         success: true,
-        data: tours,
+        data: toursWithPromotions,
         pagination: { total, page: parseInt(page), totalPages: Math.ceil(total / limit) }
     });
   } catch (error) {
