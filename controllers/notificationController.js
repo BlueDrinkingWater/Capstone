@@ -1,0 +1,80 @@
+import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+
+/**
+ * Creates and saves notifications.
+ * @param {Object} recipients - Object containing user ID or roles.
+ * @param {string} message - The notification message.
+ * @param {Object} linkMap - An object mapping roles to specific links.
+ * Example: { admin: '/owner/link', employee: '/employee/link', default: '#' }
+ */
+export const createNotification = async (recipients, message, linkMap) => {
+    try {
+        let usersToNotify = [];
+
+        if (recipients.user) {
+            const user = await User.findById(recipients.user).select('_id role permissions');
+            if (user) usersToNotify.push(user);
+        }
+
+        if (recipients.roles && Array.isArray(recipients.roles)) {
+            const usersInRoles = await User.find({ role: { $in: recipients.roles } }).select('_id role permissions');
+            usersToNotify.push(...usersInRoles);
+        }
+
+        const uniqueUsers = Array.from(new Map(usersToNotify.map(u => [u._id.toString(), u])).values());
+
+        const notifications = uniqueUsers.map(user => {
+            // --- FIX: Determine the correct link based on the user's role ---
+            const link = linkMap[user.role] || linkMap.default || '#';
+            
+            if (user.role === 'employee' && recipients.module) {
+                const hasPermission = user.permissions.some(p => p.module === recipients.module);
+                if (!hasPermission) return null;
+            }
+
+            return { user: user._id, message, link };
+        }).filter(Boolean);
+
+        if (notifications.length > 0) {
+            const createdNotifications = await Notification.insertMany(notifications);
+            console.log(`Created ${notifications.length} notifications.`);
+            return createdNotifications;
+        }
+        return [];
+    } catch (error) {
+        console.error('Error creating notification:', error);
+        return [];
+    }
+};
+
+
+export const getMyNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find({ user: req.user.id }).sort({ createdAt: -1 });
+    res.json({ success: true, data: notifications });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+export const markAsRead = async (req, res) => {
+  try {
+    const notification = await Notification.findByIdAndUpdate(req.params.id, { read: true }, { new: true });
+    if (!notification) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+    res.json({ success: true, data: notification });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+export const markAllAsRead = async (req, res) => {
+  try {
+    await Notification.updateMany({ user: req.user.id, read: false }, { $set: { read: true } });
+    res.json({ success: true, message: 'All notifications marked as read' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
