@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import {
     LayoutDashboard, Calendar, FileText, Settings, MessageSquare, Users,
     Car, MapPin, LogOut, Menu, X, Bell, User, ChevronDown, Globe,
-    Clock, CheckCircle, AlertTriangle, Eye, Plus, BarChart3, Activity, RefreshCw, RotateCcw, Edit, Archive, Star
+    Clock, CheckCircle, AlertTriangle, Eye, Plus, BarChart3, Activity, RefreshCw, RotateCcw, Edit, Archive, Star, HelpCircle, Tag
 } from 'lucide-react';
 import { useAuth } from '../../components/Login.jsx';
 import DataService from '../../components/services/DataService.jsx';
@@ -35,6 +35,8 @@ const AdminDashboard = () => {
         { name: 'Manage Bookings', href: '/owner/manage-bookings', icon: Calendar },
         { name: 'Manage Reviews', href: '/owner/manage-reviews', icon: Star },
         { name: 'Manage Feedback', href: '/owner/manage-feedback', icon: MessageSquare },
+        { name: 'Manage FAQs', href: '/owner/manage-faqs', icon: HelpCircle },
+        { name: 'Manage Promotions', href: '/owner/manage-promotions', icon: Tag },
         { name: 'Reports', href: '/owner/reports', icon: FileText },
         { name: 'Content Management', href: '/owner/content-management', icon: Settings },
         { name: 'Messages', href: '/owner/messages', icon: MessageSquare },

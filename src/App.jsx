@@ -32,11 +32,13 @@ import ManageTours from './pages/owner/ManageTours.jsx';
 import ManageBookings from './pages/owner/ManageBookings.jsx';
 import EmployeeManagement from './pages/owner/EmployeeManagement.jsx';
 import Reports from './pages/owner/Reports.jsx';
-import Messages from './pages/owner/Message.jsx';
+import Messages from './pages/owner/Messages.jsx';
 import ContentManagement from './pages/owner/ContentManagement.jsx';
 import ManageReviews from './pages/owner/ManageReviews.jsx';
-import ManageFeedback from './pages/owner/ManageFeedback.jsx'; // Import ManageFeedback
+import ManageFeedback from './pages/owner/ManageFeedback.jsx';
 import CustomerManagement from './pages/owner/CustomerManagement.jsx';
+import ManageFaqs from './pages/owner/ManageFaqs.jsx';
+import ManagePromotions from './pages/owner/ManagePromotions.jsx';
 
 // Employee Pages & Layout
 import EmployeeDashboard from './pages/employee/EmployeeDashboard.jsx';
@@ -130,7 +132,9 @@ return (
             <Route path="messages" element={<Messages />} />
             <Route path="content-management" element={<ContentManagement />} />
             <Route path="manage-reviews" element={<ManageReviews />} />
-            <Route path="manage-feedback" element={<ManageFeedback />} /> {/* Add feedback route */}
+            <Route path="manage-feedback" element={<ManageFeedback />} />
+            <Route path="manage-faqs" element={<ManageFaqs />} />
+            <Route path="manage-promotions" element={<ManagePromotions />} />
             <Route path="customer-management" element={<CustomerManagement />} />
           </Route>
 

@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Get the base URL for the API from environment variables.
-// Fallback to a relative path for local development to ensure Vite proxy works.
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+// Get the base URL for the API from environment variables, corrected for Vite.
+// Fallback to a relative path for local development to ensure the proxy works.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 // Create a single, configured Axios instance.
 const api = axios.create({
@@ -675,7 +675,43 @@ const DataService = {
       return handleError(error, 'Failed to delete FAQ.');
     }
   },
+
+  // --- Promotion Management ---
+  fetchAllPromotionsAdmin: async () => {
+    try {
+      const response = await api.get('/api/promotions/admin', { headers: getAuthHeader() });
+      return response.data;
+    } catch (error) {
+      return handleError(error, 'Failed to fetch promotions for admin.');
+    }
+  },
+
+  createPromotion: async (promoData) => {
+    try {
+      const response = await api.post('/api/promotions', promoData, { headers: getAuthHeader() });
+      return response.data;
+    } catch (error) {
+      return handleError(error, 'Failed to create promotion.');
+    }
+  },
+
+  updatePromotion: async (id, promoData) => {
+    try {
+      const response = await api.put(`/api/promotions/${id}`, promoData, { headers: getAuthHeader() });
+      return response.data;
+    } catch (error) {
+      return handleError(error, 'Failed to update promotion.');
+    }
+  },
+
+  deletePromotion: async (id) => {
+    try {
+      const response = await api.delete(`/api/promotions/${id}`, { headers: getAuthHeader() });
+      return response.data;
+    } catch (error) {
+      return handleError(error, 'Failed to delete promotion.');
+    }
+  },
 };
 
 export default DataService;
-
