@@ -122,12 +122,12 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
       const endDate = new Date(startDate);
       endDate.setDate(startDate.getDate() + parseInt(formData.numberOfDays, 10));
       setCalculatedEndDate(endDate);
-      setTotalPrice(formData.numberOfDays * (item.pricePerDay || 0));
+      setTotalPrice(formData.numberOfDays * (item?.pricePerDay || 0));
     } else if (itemType === 'tour') {
-      setTotalPrice(formData.numberOfGuests * (item.price || 0));
+      setTotalPrice(formData.numberOfGuests * (item?.price || 0));
       setCalculatedEndDate(item.endDate ? new Date(item.endDate) : null);
     }
-  }, [formData.startDate, formData.numberOfDays, formData.numberOfGuests, item, itemType]);
+  }, [formData.startDate, formData.numberOfDays, formData.numberOfGuests, item?.pricePerDay, item?.price, item?.endDate, itemType]);
   
   const handleFileChange = (e) => setFormData(prev => ({ ...prev, paymentProof: e.target.files[0] }));
   
@@ -151,6 +151,9 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address) {
       return setSubmitError('Please fill in all your personal information, including your address.');
     }
+    if (formData.phone.length !== 11) {
+      return setSubmitError('Please enter a valid 11-digit phone number.');
+    }
     if (itemType === 'car' && (!formData.startDate || !formData.time || formData.numberOfDays < 1)) {
       return setSubmitError('Please select a start date, time, and number of days.');
     }
@@ -163,8 +166,11 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
     if (itemType === 'tour' && (!formData.startDate || !item.endDate)) {
       return setSubmitError('Tour date information is missing. Please contact support.');
     }
-    if (!formData.paymentProof || !formData.paymentReference || !formData.amountPaid) {
-      return setSubmitError('Please provide all payment details, including the proof of payment.');
+    if (!formData.paymentProof) {
+        return setSubmitError('Please upload your proof of payment.');
+    }
+    if (!formData.paymentReference || !formData.amountPaid) {
+      return setSubmitError('Please provide all payment details.');
     }
     if (!formData.agreedToTerms) {
       return setSubmitError('You must agree to the terms and conditions to proceed.');
@@ -246,13 +252,13 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="font-semibold mb-3">Your Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       <div><label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label><input type="text" required value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full p-2 border rounded-md"/></div>
-                       <div><label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label><input type="text" required value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full p-2 border rounded-md"/></div>
-                       <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Email *</label><input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full p-2 border rounded-md"/></div>
-                       <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label><input type="tel" required value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2 border rounded-md"/></div>
+                       <div><label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label><input type="text" name="firstName" required value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full p-2 border rounded-md"/></div>
+                       <div><label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label><input type="text" name="lastName" required value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full p-2 border rounded-md"/></div>
+                       <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Email *</label><input type="email" name="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full p-2 border rounded-md"/></div>
+                       <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label><input type="tel" name="phone" required value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2 border rounded-md"/></div>
                        <div className="md:col-span-2">
                           <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
-                          <textarea required value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full p-2 border rounded-md" rows="2"></textarea>
+                          <textarea name="address" required value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full p-2 border rounded-md" rows="2"></textarea>
                        </div>
                     </div>
                   </div>
@@ -302,7 +308,7 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
                         {formData.deliveryMethod === 'pickup' ? (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Location</label>
-                            <select value={formData.pickupLocation} onChange={(e) => setFormData({ ...formData, pickupLocation: e.target.value })} className="w-full p-2 border rounded-md">
+                            <select name="pickupLocation" value={formData.pickupLocation} onChange={(e) => setFormData({ ...formData, pickupLocation: e.target.value })} className="w-full p-2 border rounded-md">
                               <option value="">Select a location</option>
                               {item.pickupLocations?.map((location, index) => (<option key={index} value={location}>{location}</option>))}
                             </select>
@@ -322,9 +328,9 @@ const BookingModal = ({ isOpen, onClose, item, itemType }) => {
                     <div className="flex flex-col items-center">
                         {qrLoading ? <p>Loading QR...</p> : paymentQR ? <img src={paymentQR} alt="Payment QR Code" className="w-48 h-48 object-contain mb-4 border rounded-md" /> : <p className="text-sm text-gray-500 mb-4">QR code not available.</p>}
                         <div className="w-full space-y-4">
-                          <input type="text" placeholder="Payment Reference Number *" required value={formData.paymentReference} onChange={(e) => setFormData({ ...formData, paymentReference: e.target.value })} className="w-full p-2 border rounded-md"/>
-                          <input type="number" placeholder="Amount Paid *" required value={formData.amountPaid} onChange={(e) => setFormData({ ...formData, amountPaid: e.target.value })} className="w-full p-2 border rounded-md"/>
-                          <label htmlFor="paymentProof" className="w-full text-center cursor-pointer bg-white border-2 border-dashed rounded-lg p-4 hover:bg-gray-50"><Upload className="w-8 h-8 mx-auto text-gray-400 mb-2"/><span className="text-sm font-medium text-gray-700">{formData.paymentProof ? formData.paymentProof.name : 'Upload Payment Proof *'}</span><input id="paymentProof" type="file" required onChange={handleFileChange} className="hidden"/></label>
+                          <input type="text" placeholder="Payment Reference Number *" name="paymentReference" required value={formData.paymentReference} onChange={(e) => setFormData({ ...formData, paymentReference: e.target.value })} className="w-full p-2 border rounded-md"/>
+                          <input type="number" placeholder="Amount Paid *" name="amountPaid" required value={formData.amountPaid} onChange={(e) => setFormData({ ...formData, amountPaid: e.target.value })} className="w-full p-2 border rounded-md"/>
+                          <label htmlFor="paymentProof" className="w-full text-center cursor-pointer bg-white border-2 border-dashed rounded-lg p-4 hover:bg-gray-50"><Upload className="w-8 h-8 mx-auto text-gray-400 mb-2"/><span className="text-sm font-medium text-gray-700">{formData.paymentProof ? formData.paymentProof.name : 'Upload Payment Proof *'}</span><input id="paymentProof" type="file" name="paymentProof" required onChange={handleFileChange} className="hidden"/></label>
                         </div>
                     </div>
                   </div>

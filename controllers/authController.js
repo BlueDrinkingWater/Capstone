@@ -41,7 +41,7 @@ export const register = async (req, res) => {
       );
     }
 
-    res.status(201).json({ success: true, message: 'User registered successfully' });
+    res.status(201).json({ success: true, message: 'Registration successful! Please log in to continue.' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -120,7 +120,7 @@ export const googleLogin = async (req, res) => {
 
   } catch (error) {
     console.error('Google Login Error:', error);
-    res.status(500).json({ success: false, message: 'Google authentication failed.' });
+    res.status(500).json({ success: false, message: 'Google authentication failed. Please try again or use another login method.' });
   }
 };
 
@@ -176,7 +176,7 @@ export const facebookLogin = async (req, res) => {
 
   } catch (error) {
     console.error('Facebook Login Error:', error.response ? error.response.data : error.message);
-    res.status(500).json({ success: false, message: 'Facebook authentication failed.' });
+    res.status(500).json({ success: false, message: 'Facebook authentication failed. Please try again or use another login method.' });
   }
 };
 

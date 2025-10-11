@@ -109,7 +109,7 @@ export const createBooking = async (req, res) => {
             startDate: new Date(startDate),
             endDate: endDate ? new Date(endDate) : new Date(startDate),
             itemModel: itemType.charAt(0).toUpperCase() + itemType.slice(1),
-            paymentProofUrl: req.file ? `payment_proofs/${req.file.filename}` : null,
+            paymentProofUrl: req.file ? `/uploads/payment_proofs/${req.file.filename}` : null,
             dropoffCoordinates: coords,
             paymentReference,
             amountPaid: Number(amountPaid) || 0,

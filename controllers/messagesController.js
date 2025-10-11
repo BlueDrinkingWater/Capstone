@@ -57,6 +57,15 @@ export const replyToMessage = async (req, res) => {
         io.to('admin').emit('activity-log-update', newLog);
     }
     
+    // Notify the original sender
+    if (io && message.user) {
+      const userSocketId = message.user.toString();
+      io.to(userSocketId).emit('notification', {
+        message: `You have a new reply to your message: "${message.subject}"`,
+        link: '/my-feedback' 
+      });
+    }
+
     // Prepare attachment if it exists
     const attachments = [];
     if (req.file) {

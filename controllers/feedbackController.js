@@ -64,7 +64,7 @@ export const createFeedback = async (req, res) => {
 // Get all feedback (Admin only)
 export const getAllFeedback = async (req, res) => {
     try {
-        const feedback = await Feedback.find({ user: { $ne: null } }) // Optimization
+        const feedback = await Feedback.find({}) 
             .populate('user', 'firstName lastName')
             .sort({ createdAt: -1 });
         res.json({ success: true, data: feedback });
@@ -76,7 +76,7 @@ export const getAllFeedback = async (req, res) => {
 // Get all approved feedback (Public)
 export const getPublicFeedback = async (req, res) => {
     try {
-        const feedback = await Feedback.find({ isApproved: true, user: { $ne: null } }) // Optimization
+        const feedback = await Feedback.find({ isApproved: true })
             .populate('user', 'firstName lastName')
             .sort({ createdAt: -1 });
         res.json({ success: true, data: feedback });

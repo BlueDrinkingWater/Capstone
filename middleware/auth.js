@@ -26,10 +26,16 @@ export const auth = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('Auth middleware error:', error.name, error.message);
+    let message = 'Invalid token.';
+    if (error.name === 'TokenExpiredError') {
+      message = 'Your session has expired. Please log in again.';
+    } else if (error.name === 'JsonWebTokenError') {
+      message = 'Invalid token signature. Please log in again.';
+    }
     return res.status(401).json({
       success: false,
-      message: 'Invalid token.'
+      message,
     });
   }
 };

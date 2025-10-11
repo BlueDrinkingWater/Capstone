@@ -223,7 +223,7 @@ export const UnifiedLoginPortal = ({ isOpen, onClose, showRegistration = false }
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    setIsLoginView(true);
+    setIsLoginView(true); // Always default to login view when switching tabs
     resetForm();
   };
 
@@ -245,6 +245,11 @@ export const UnifiedLoginPortal = ({ isOpen, onClose, showRegistration = false }
         }
       } else { setError(result.message); }
     } else {
+      if (activeTab === 'staff') {
+        setError("Staff cannot register through this form.");
+        setLoading(false);
+        return;
+      }
       result = await register(formData);
       if (result.success) {
         alert('Registration successful! Please log in.');
@@ -365,10 +370,12 @@ export const UnifiedLoginPortal = ({ isOpen, onClose, showRegistration = false }
             )}
 
             <p className="mt-6 text-center text-sm text-gray-500">
-              {isLoginView ? "Don't have an account? " : "Already have an account? "}
-              <button onClick={() => { setIsLoginView(!isLoginView); resetForm(); }} className="font-semibold text-blue-600 hover:underline">
-                {isLoginView ? 'Sign up' : 'Sign in'}
-              </button>
+              {isLoginView && activeTab === 'customer' ? "Don't have an account? " : "Already have an account? "}
+              {activeTab === 'customer' && 
+                <button onClick={() => { setIsLoginView(!isLoginView); resetForm(); }} className="font-semibold text-blue-600 hover:underline">
+                  {isLoginView ? 'Sign up' : 'Sign in'}
+                </button>
+              }
             </p>
         </div>
       </div>
