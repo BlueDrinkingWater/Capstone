@@ -63,45 +63,6 @@ export const submitReview = async (req, res) => {
     }
 };
 
-// Submit feedback (general feedback for dashboard)
-export const submitFeedback = async (req, res) => {
-    try {
-        const { bookingId, rating, comment, isAnonymous } = req.body;
-
-        const booking = await Booking.findById(bookingId);
-        if (!booking) {
-            return res.status(404).json({ success: false, message: 'Booking not found.' });
-        }
-        if (booking.status !== 'completed') {
-            return res.status(400).json({ success: false, message: 'You can only provide feedback for completed bookings.' });
-        }
-        if (!booking.user || booking.user.toString() !== req.user.id) {
-            return res.status(403).json({ success: false, message: 'You can only provide feedback for your own bookings.' });
-        }
-
-        const existingFeedback = await Feedback.findOne({ booking: bookingId });
-        if (existingFeedback) {
-            return res.status(400).json({ success: false, message: 'You have already provided feedback for this booking.' });
-        }
-
-        const feedback = new Feedback({
-            user: req.user.id,
-            booking: bookingId,
-            rating,
-            comment,
-            isAnonymous: isAnonymous || false,
-            serviceType: booking.itemType,
-            image: req.file ? `/uploads/feedback/${req.file.filename}` : undefined
-        });
-
-        await feedback.save();
-        res.status(201).json({ success: true, data: feedback });
-    } catch (error) {
-        console.error('Error submitting feedback:', error);
-        res.status(500).json({ success: false, message: 'Failed to submit feedback.' });
-    }
-};
-
 // Get reviews for a specific item (car/tour)
 export const getReviewsForItem = async (req, res) => {
     try {

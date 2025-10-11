@@ -25,7 +25,8 @@ import reviewRoutes from './routes/reviews.js';
 import feedbackRoutes from './routes/feedback.js';
 import notificationRoutes from './routes/notification.js';
 import activityLogRoutes from './routes/activityLog.js';
-import faqRoutes from './routes/faq.js'; // <-- ADD THIS LINE
+import faqRoutes from './routes/faq.js';
+import promotionRoutes from './routes/promotions.js'; // <-- ADD THIS LINE
 
 // --- Middleware Imports ---
 import { errorHandler, notFound } from './middleware/errorHandler.js';
@@ -44,7 +45,7 @@ const allowedOrigins = [
     'https://localhost:3000',      // Vite's default local host (HTTPS)
     process.env.CLIENT_URL,        // Your Vercel URL from .env
     'https://accounts.google.com'
-].filter(Boolean); 
+].filter(Boolean);
 
 const io = new Server(server, {
   cors: {
@@ -96,7 +97,8 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/activity-log', activityLogRoutes);
-app.use('/api/faqs', faqRoutes); // <-- ADD THIS LINE
+app.use('/api/faqs', faqRoutes);
+app.use('/api/promotions', promotionRoutes); // <-- ADD THIS LINE
 
 // --- HEALTH CHECK ---
 app.get('/api/health', (req, res) => {

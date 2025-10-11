@@ -154,6 +154,14 @@ const Tours = () => {
               </div>
             )}
             
+            {tour.promotion && (
+              <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
+                {tour.promotion.discountType === 'percentage'
+                  ? `${tour.promotion.discountValue}% OFF`
+                  : `₱${tour.promotion.discountValue} OFF`}
+              </div>
+            )}
+            
             {!tour.isAvailable && (
               <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <div className="bg-red-600 text-white px-3 py-1 rounded font-semibold">

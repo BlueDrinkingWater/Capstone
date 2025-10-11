@@ -22,6 +22,9 @@ import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ResetPassword from './pages/auth/ResetPassword.jsx';
 import PublicFeedback from './pages/PublicFeedback.jsx';
 
+// Shared Authed Pages
+import AccountSettings from './pages/shared/AccountSettings.jsx';
+
 // Customer Pages
 import CustomerDashboard from './pages/customer/CustomerDashboard.jsx';
 
@@ -39,6 +42,7 @@ import ManageFeedback from './pages/owner/ManageFeedback.jsx';
 import CustomerManagement from './pages/owner/CustomerManagement.jsx';
 import ManageFaqs from './pages/owner/ManageFaqs.jsx';
 import ManagePromotions from './pages/owner/ManagePromotions.jsx';
+import ManageQRCode from './pages/owner/ManageQRCode.jsx'; 
 
 // Employee Pages & Layout
 import EmployeeDashboard from './pages/employee/EmployeeDashboard.jsx';
@@ -115,6 +119,8 @@ return (
           <Route path="/feedback" element={<PublicFeedback />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/account-settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
+
           <Route
             path="/my-bookings"
             element={<ProtectedRoute requiredRole="customer"><CustomerDashboard /></ProtectedRoute>}
@@ -135,7 +141,9 @@ return (
             <Route path="manage-feedback" element={<ManageFeedback />} />
             <Route path="manage-faqs" element={<ManageFaqs />} />
             <Route path="manage-promotions" element={<ManagePromotions />} />
+            <Route path="manage-qr-code" element={<ManageQRCode />} />
             <Route path="customer-management" element={<CustomerManagement />} />
+            <Route path="account-settings" element={<AccountSettings />} />
           </Route>
 
           {/* Employee Protected Routes */}
@@ -148,6 +156,13 @@ return (
              <Route path="manage-tours" element={<ManageTours />} />
              <Route path="reports" element={<Reports />} />
              <Route path="content-management" element={<ContentManagement />} />
+             <Route path="manage-reviews" element={<ManageReviews />} />
+             <Route path="manage-feedback" element={<ManageFeedback />} />
+             <Route path="manage-faqs" element={<ManageFaqs />} />
+             <Route path="manage-promotions" element={<ManagePromotions />} />
+             <Route path="manage-qr-code" element={<ManageQRCode />} />
+             <Route path="customer-management" element={<CustomerManagement />} />
+             <Route path="account-settings" element={<AccountSettings />} />
           </Route>
 
           <Route path="/unauthorized" element={<div>Access Denied</div>} />

@@ -1,7 +1,7 @@
 import express from 'express';
-import { 
-    createFeedback, 
-    getPublicFeedback, 
+import {
+    createFeedback,
+    getPublicFeedback,
     getAllFeedback,
     approveFeedback,
     deleteFeedback,
@@ -21,8 +21,8 @@ router.post('/', auth, upload.single('image'), createFeedback);
 router.get('/my-feedback', auth, getMyFeedback);
 
 // Admin routes
-router.get('/', auth, checkPermission('reviews', 'read'), getAllFeedback);
-router.patch('/:id/approve', auth, checkPermission('reviews', 'write'), approveFeedback);
-router.delete('/:id', auth, checkPermission('reviews', 'full'), deleteFeedback);
+router.get('/', auth, checkPermission('feedback', 'read'), getAllFeedback);
+router.patch('/:id/approve', auth, checkPermission('feedback', 'write'), approveFeedback);
+router.delete('/:id', auth, checkPermission('feedback', 'full'), deleteFeedback);
 
 export default router;

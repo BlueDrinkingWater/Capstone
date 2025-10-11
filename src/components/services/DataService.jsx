@@ -96,6 +96,31 @@ const DataService = {
     }
   },
 
+  uploadProfilePicture: async (file) => {
+      const formData = new FormData();
+      formData.append('profilePicture', file);
+      try {
+          const response = await api.post('/api/users/profile/picture', formData, {
+              headers: {
+                  ...getAuthHeader(),
+                  'Content-Type': 'multipart/form-data',
+              },
+          });
+          return response.data;
+      } catch (error) {
+          return handleError(error, 'Failed to upload profile picture.');
+      }
+  },
+
+  deleteAccount: async () => {
+      try {
+          const response = await api.delete('/api/users/profile', { headers: getAuthHeader() });
+          return response.data;
+      } catch (error) {
+          return handleError(error, 'Failed to delete account.');
+      }
+  },
+
   changePassword: async (passwordData) => {
     try {
       const response = await api.put('/api/auth/change-password', passwordData, { headers: getAuthHeader() });
@@ -605,7 +630,6 @@ const DataService = {
   // --- Content Management ---
   fetchContent: async (type) => {
     try {
-      // Add a cache-busting query parameter
       const response = await api.get(`/api/content/${type}`, {
         params: {
           _: new Date().getTime(),
@@ -682,6 +706,15 @@ const DataService = {
   },
 
   // --- Promotion Management ---
+  fetchAllPromotions: async () => {
+    try {
+      const response = await api.get('/api/promotions');
+      return response.data;
+    } catch (error) {
+      return handleError(error, 'Failed to fetch promotions.');
+    }
+  },
+
   fetchAllPromotionsAdmin: async () => {
     try {
       const response = await api.get('/api/promotions/admin', { headers: getAuthHeader() });

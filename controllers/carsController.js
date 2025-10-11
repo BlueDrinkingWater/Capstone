@@ -83,24 +83,9 @@ export const createCar = async (req, res) => {
     await car.save();
 
     const io = req.app.get('io');
-    if (io) {
-      io.to('customer').emit('new-car', {
-          message: `New car available: ${car.brand} ${car.model}`,
-          link: `/cars/${car._id}`
-      });
-
-      if (req.user.role === 'employee') {
-          const message = `Employee ${req.user.firstName} added a new car: ${car.brand} ${car.model}`;
-          const newLog = await createActivityLog(req.user.id, 'CREATE_CAR', `Car: ${car.brand} ${car.model}`, '/owner/manage-cars');
-
-          io.to('admin').emit('activity-log-update', newLog);
-
-          await createNotification(
-            { roles: ['admin', 'employee'], module: 'cars' },
-            message,
-            { admin: '/owner/manage-cars', employee: '/employee/manage-cars' }
-          );
-      }
+    if (io && req.user.role === 'employee') {
+        const newLog = await createActivityLog(req.user.id, 'CREATE_CAR', `Car: ${car.brand} ${car.model}`, '/owner/manage-cars');
+        io.to('admin').emit('activity-log-update', newLog);
     }
 
     res.status(201).json({ success: true, data: car });
@@ -116,16 +101,8 @@ export const updateCar = async (req, res) => {
 
     const io = req.app.get('io');
     if (io && req.user.role === 'employee') {
-        const message = `Employee ${req.user.firstName} updated the car: ${car.brand} ${car.model}`;
         const newLog = await createActivityLog(req.user.id, 'UPDATE_CAR', `Car: ${car.brand} ${car.model}`, '/owner/manage-cars');
-
         io.to('admin').emit('activity-log-update', newLog);
-
-        await createNotification(
-            { roles: ['admin', 'employee'], module: 'cars' },
-            message,
-            { admin: '/owner/manage-cars', employee: '/employee/manage-cars' }
-        );
     }
 
     res.json({ success: true, data: car });
@@ -141,16 +118,8 @@ export const archiveCar = async (req, res) => {
 
     const io = req.app.get('io');
     if (io && req.user.role === 'employee') {
-        const message = `Employee ${req.user.firstName} archived the car: ${car.brand} ${car.model}`;
         const newLog = await createActivityLog(req.user.id, 'ARCHIVE_CAR', `Car: ${car.brand} ${car.model}`, '/owner/manage-cars');
-
         io.to('admin').emit('activity-log-update', newLog);
-
-        await createNotification(
-            { roles: ['admin', 'employee'], module: 'cars' },
-            message,
-            { admin: '/owner/manage-cars', employee: '/employee/manage-cars' }
-        );
     }
 
     res.json({ success: true, message: "Car archived successfully", data: car });
@@ -163,6 +132,13 @@ export const unarchiveCar = async (req, res) => {
   try {
     const car = await Car.findByIdAndUpdate(req.params.id, { archived: false, isAvailable: true }, { new: true });
     if (!car) return res.status(404).json({ success: false, message: 'Car not found' });
+    
+    const io = req.app.get('io');
+    if (io && req.user.role === 'employee') {
+        const newLog = await createActivityLog(req.user.id, 'RESTORE_CAR', `Car: ${car.brand} ${car.model}`, '/owner/manage-cars');
+        io.to('admin').emit('activity-log-update', newLog);
+    }
+
     res.json({ success: true, message: "Car restored successfully", data: car });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -175,7 +151,43 @@ export const getCarById = async (req, res) => {
     if (!car) {
       return res.status(404).json({ success: false, message: 'Car not found' });
     }
-    res.json({ success: true, data: car });
+
+    const promotions = await Promotion.find({ isActive: true, endDate: { $gte: new Date() } });
+    const carObj = car.toObject();
+    carObj.originalPrice = carObj.pricePerDay;
+
+    const applicablePromotions = promotions.filter(promo => {
+        if (promo.applicableTo === 'all') return true;
+        if (promo.applicableTo === 'car' && promo.itemIds.includes(car._id.toString())) return true;
+        return false;
+    });
+
+    if (applicablePromotions.length > 0) {
+        let bestPrice = carObj.pricePerDay;
+        let bestPromo = null;
+        applicablePromotions.forEach(promo => {
+            let discountedPrice;
+            if (promo.discountType === 'percentage') {
+                discountedPrice = carObj.originalPrice - (carObj.originalPrice * (promo.discountValue / 100));
+            } else {
+                discountedPrice = carObj.originalPrice - promo.discountValue;
+            }
+            if (discountedPrice < bestPrice) {
+                bestPrice = discountedPrice;
+                bestPromo = promo;
+            }
+        });
+        carObj.pricePerDay = bestPrice;
+        if (bestPromo) {
+          carObj.promotion = {
+            title: bestPromo.title,
+            discountValue: bestPromo.discountValue,
+            discountType: bestPromo.discountType,
+          };
+        }
+    }
+
+    res.json({ success: true, data: carObj });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server Error' });
   }

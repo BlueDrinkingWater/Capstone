@@ -51,17 +51,10 @@ export const replyToMessage = async (req, res) => {
     
     const io = req.app.get('io');
     if (io && req.user.role === 'employee') {
-        const notificationMessage = `Employee ${req.user.firstName} replied to a message from ${message.name}.`;
         const link = '/owner/messages';
         
         const newLog = await createActivityLog(req.user.id, 'REPLY_MESSAGE', `Message from: ${message.name}`, link);
         io.to('admin').emit('activity-log-update', newLog);
-
-        await createNotification(
-          { roles: ['admin'], module: 'messages' },
-          notificationMessage,
-          { admin: link }
-        );
     }
     
     // Prepare attachment if it exists

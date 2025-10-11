@@ -6,9 +6,10 @@ import User from '../models/User.js';
  * @param {Object} recipients - Object containing user ID or roles.
  * @param {string} message - The notification message.
  * @param {Object} linkMap - An object mapping roles to specific links.
+ * @param {string} [initiatorId] - The ID of the user who triggered the action, to be excluded from notifications.
  * Example: { admin: '/owner/link', employee: '/employee/link', default: '#' }
  */
-export const createNotification = async (recipients, message, linkMap) => {
+export const createNotification = async (recipients, message, linkMap, initiatorId = null) => {
     try {
         let usersToNotify = [];
 
@@ -22,12 +23,18 @@ export const createNotification = async (recipients, message, linkMap) => {
             usersToNotify.push(...usersInRoles);
         }
 
-        const uniqueUsers = Array.from(new Map(usersToNotify.map(u => [u._id.toString(), u])).values());
+        // Filter out the initiator and then get unique users
+        const uniqueUsers = Array.from(new Map(
+            usersToNotify
+                .filter(u => !initiatorId || u._id.toString() !== initiatorId)
+                .map(u => [u._id.toString(), u])
+        ).values());
+
 
         const notifications = uniqueUsers.map(user => {
             // --- FIX: Determine the correct link based on the user's role ---
             const link = linkMap[user.role] || linkMap.default || '#';
-            
+
             if (user.role === 'employee' && recipients.module) {
                 const hasPermission = user.permissions.some(p => p.module === recipients.module);
                 if (!hasPermission) return null;

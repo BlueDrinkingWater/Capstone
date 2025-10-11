@@ -6,8 +6,8 @@ import DataService, { SERVER_URL } from '../components/services/DataService';
 import BookingModal from '../components/BookingModal';
 
 // --- Reviews Section Component ---
-const ReviewsSection = ({ carId }) => {
-  const { data: reviewsData, loading: reviewsLoading } = useApi(() => DataService.fetchReviewsForItem(carId), [carId]);
+const ReviewsSection = ({ itemId }) => {
+  const { data: reviewsData, loading: reviewsLoading } = useApi(() => DataService.fetchReviewsForItem(itemId), [itemId]);
   const reviews = reviewsData?.data || [];
 
   if (reviewsLoading) return <div className="text-center p-4">Loading reviews...</div>;
@@ -42,7 +42,7 @@ const ReviewsSection = ({ carId }) => {
       ) : (
         <div className="bg-gray-50 p-8 rounded-lg text-center">
           <Star className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600">No reviews yet. Be the first to review this car!</p>
+          <p className="text-gray-600">No reviews yet. Be the first to review this tour!</p>
         </div>
       )}
     </div>
@@ -54,15 +54,8 @@ const TourDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  // Fetch tour details
   const { data: tourData, loading, error } = useApi(() => DataService.fetchTourById(id), [id]);
-  const { data: promotionsResponse } = useApi(DataService.fetchAllPromotions, []);
   const tour = tourData?.data;
-  const promotions = promotionsResponse?.data || [];
-
-  // Fetch approved reviews for this tour
-  const { data: reviewsData, loading: reviewsLoading } = useApi(() => DataService.fetchReviewsForItem(id), [id]);
-  const reviews = reviewsData?.data;
   
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [mainImage, setMainImage] = useState('');
@@ -81,41 +74,6 @@ const TourDetails = () => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
-  
-    const getDiscountedPrice = (item) => {
-      if (!promotions || promotions.length === 0) {
-          return { price: item.price, originalPrice: null };
-      }
-
-      const applicablePromotions = promotions.filter(promo => {
-          if (!promo.isActive) return false;
-          if (promo.applicableTo === 'all') return true;
-          if (promo.applicableTo === 'tour' && promo.itemIds.includes(item._id)) return true;
-          return false;
-      });
-
-      if (applicablePromotions.length === 0) {
-          return { price: item.price, originalPrice: null };
-      }
-
-      let bestPrice = item.price;
-      let originalPrice = item.price;
-
-      applicablePromotions.forEach(promo => {
-          let discountedPrice;
-          if (promo.discountType === 'percentage') {
-              discountedPrice = originalPrice - (originalPrice * (promo.discountValue / 100));
-          } else {
-              discountedPrice = originalPrice - promo.discountValue;
-          }
-
-          if (discountedPrice < bestPrice) {
-              bestPrice = discountedPrice;
-          }
-      });
-      
-      return { price: bestPrice, originalPrice: originalPrice };
-  };
 
   if (loading) {
     return (
@@ -128,8 +86,6 @@ const TourDetails = () => {
   if (error || !tour) {
     return <div className="text-center p-12 text-red-500">Error: {error?.message || 'Tour not found.'}</div>;
   }
-  
-    const { price, originalPrice } = getDiscountedPrice(tour);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -139,15 +95,12 @@ const TourDetails = () => {
         </button>
         
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Left Column: Details */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-xl shadow-lg overflow-hidden p-6">
-              {/* Main Image */}
               <div className="h-96 w-full mb-4 rounded-lg overflow-hidden bg-gray-200">
                 <img src={`${SERVER_URL}${mainImage}`} alt={tour.title} className="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
               </div>
 
-              {/* Thumbnail Images */}
               {tour.images && tour.images.length > 1 && (
                 <div className="grid grid-cols-5 gap-2">
                   {tour.images.map((img, index) => (
@@ -229,21 +182,26 @@ const TourDetails = () => {
                 </div>
               )}
 
-              {/* Reviews Section */}
-              <ReviewsSection reviews={reviews} loading={reviewsLoading} />
+              <ReviewsSection itemId={id} />
               
             </div>
           </div>
 
-          {/* Right Column: Booking */}
           <div className="lg:col-span-2">
             <div className="sticky top-28 bg-white rounded-xl shadow-lg p-6 border">
+              {tour.promotion && (
+                <div className="mb-4 bg-red-500 text-white text-center font-bold py-2 rounded-lg">
+                  {tour.promotion.discountType === 'percentage'
+                    ? `${tour.promotion.discountValue}% OFF - ${tour.promotion.title}`
+                    : `₱${tour.promotion.discountValue} OFF - ${tour.promotion.title}`}
+                </div>
+              )}
               <div className="flex items-baseline mb-2">
-                {originalPrice && originalPrice > price && (
-                    <span className="text-gray-500 line-through mr-2">{originalPrice.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</span>
+                {tour.originalPrice && tour.originalPrice > tour.price && (
+                    <span className="text-gray-500 line-through mr-2">{tour.originalPrice.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</span>
                 )}
                 <p className="text-3xl font-bold text-green-600">
-                    {price.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}
+                    {tour.price.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}
                 </p>
                 <span className="text-lg text-gray-500 ml-1">/person</span>
               </div>

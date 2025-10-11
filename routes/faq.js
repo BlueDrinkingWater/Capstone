@@ -6,17 +6,18 @@ import {
   updateFAQ,
   deleteFAQ,
 } from '../controllers/faqController.js';
-import { auth, authorize } from '../middleware/auth.js';
+import { auth } from '../middleware/auth.js';
+import { checkPermission } from '../middleware/permission.js';
 
 const router = express.Router();
 
 // Public route to get active FAQs
 router.get('/', getAllFAQs);
 
-// Admin routes
-router.get('/admin', auth, authorize('admin', 'employee'), getAllFAQsAdmin);
-router.post('/', auth, authorize('admin', 'employee'), createFAQ);
-router.put('/:id', auth, authorize('admin', 'employee'), updateFAQ);
-router.delete('/:id', auth, authorize('admin', 'employee'), deleteFAQ);
+// Admin & Employee (with permission) routes
+router.get('/admin', auth, checkPermission('faqs', 'read'), getAllFAQsAdmin);
+router.post('/', auth, checkPermission('faqs', 'write'), createFAQ);
+router.put('/:id', auth, checkPermission('faqs', 'write'), updateFAQ);
+router.delete('/:id', auth, checkPermission('faqs', 'full'), deleteFAQ);
 
 export default router;

@@ -32,29 +32,22 @@ export const getAllPromotionsAdmin = async (req, res) => {
 export const createPromotion = async (req, res) => {
   try {
     const promotionData = { ...req.body };
-
-    // --- FIX: Ensure discountValue is correctly parsed as a number ---
-    // This prevents validation errors if the form sends an empty string.
     promotionData.discountValue = Number(promotionData.discountValue);
     if (isNaN(promotionData.discountValue)) {
-      promotionData.discountValue = 0; // Default to 0 if the value is not a valid number.
+      promotionData.discountValue = 0;
     }
 
     const promotion = new Promotion(promotionData);
     await promotion.save();
 
     const io = req.app.get('io');
-    if (io) {
-        const message = `A new promotion has been created: ${promotion.title}`;
-        const link = '/owner/manage-promotions';
-        // This notification structure is now correct.
-        await createNotification({ roles: ['admin', 'employee'] }, message, { admin: link, employee: link });
-        io.to('admin').to('employee').emit('notification', { message, link });
+    if (io && req.user.role === 'employee') {
+        const newLog = await createActivityLog(req.user.id, 'CREATE_PROMOTION', `Promotion: ${promotion.title}`, '/owner/manage-promotions');
+        io.to('admin').emit('activity-log-update', newLog);
     }
 
     res.status(201).json({ success: true, data: promotion });
   } catch (error) {
-    // Log the detailed error on the server for easier debugging in the future
     console.error("PROMOTION CREATION ERROR:", error); 
     res.status(400).json({ success: false, message: error.message });
   }
@@ -72,6 +65,13 @@ export const updatePromotion = async (req, res) => {
     if (!promotion) {
       return res.status(404).json({ success: false, message: 'Promotion not found' });
     }
+
+    const io = req.app.get('io');
+    if (io && req.user.role === 'employee') {
+        const newLog = await createActivityLog(req.user.id, 'UPDATE_PROMOTION', `Promotion: ${promotion.title}`, '/owner/manage-promotions');
+        io.to('admin').emit('activity-log-update', newLog);
+    }
+
     res.json({ success: true, data: promotion });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -87,6 +87,13 @@ export const deletePromotion = async (req, res) => {
     if (!promotion) {
       return res.status(404).json({ success: false, message: 'Promotion not found' });
     }
+
+    const io = req.app.get('io');
+    if (io && req.user.role === 'employee') {
+        const newLog = await createActivityLog(req.user.id, 'DELETE_PROMOTION', `Promotion: ${promotion.title}`, '/owner/manage-promotions');
+        io.to('admin').emit('activity-log-update', newLog);
+    }
+
     res.json({ success: true, message: 'Promotion deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server Error' });
